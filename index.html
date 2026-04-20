@@ -662,7 +662,7 @@ function parseGviz(json) {
     cols.forEach((col, i) => {
       const label = (col.label || col.id || `col${i}`).trim();
       const cell = row.c?.[i];
-      obj[label] = cell?.v != null ? String(cell.v) : (cell?.f || "");
+      obj[label] = cell?.f || (cell?.v != null ? String(cell.v) : "");
     });
     return obj;
   }).filter(r => Object.values(r).some(v => v.trim?.() !== ""));

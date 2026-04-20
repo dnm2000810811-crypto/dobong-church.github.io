@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교회 홈페이지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600;700&family=Noto+Sans+KR:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ── 구글 시트 설정 ─────────────────────────────────── */
+  /* config.js 또는 이 섹션에서 시트 ID를 바꾸세요         */
+
+  :root {
+    --sheet-id: "YOUR_GOOGLE_SHEET_ID_HERE";
+
+    --gold:    #B8924A;
+    --gold-lt: #D4AF72;
+    --cream:   #FAF7F2;
+    --ink:     #1C1814;
+    --ink-60:  #6B6057;
+    --ink-30:  #B0A89E;
+    --white:   #FFFFFF;
+    --border:  rgba(184,146,74,0.25);
+
+    --serif: 'Cormorant Garamond', 'Noto Serif KR', serif;
+    --sans:  'Noto Sans KR', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; font-size: 16px; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--cream);
+    color: var(--ink);
+    overflow-x: hidden;
+  }
+
+  /* ── 로딩 오버레이 ── */
+  #page-loader {
+    position: fixed; inset: 0;
+    background: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    transition: opacity .6s ease, visibility .6s ease;
+  }
+  #page-loader.hidden { opacity: 0; visibility: hidden; }
+  .loader-cross {
+    width: 48px; height: 48px;
+    position: relative; animation: spin 1.4s linear infinite;
+  }
+  .loader-cross::before, .loader-cross::after {
+    content: ''; position: absolute;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  .loader-cross::before { width: 6px; height: 100%; left: 50%; transform: translateX(-50%); }
+  .loader-cross::after  { width: 100%; height: 6px; top: 50%; transform: translateY(-50%); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── 헤더 / 내비 ── */
+  header {
+    position: fixed; top: 0; width: 100%;
+    background: rgba(250,247,242,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    z-index: 100;
+    transition: box-shadow .3s;
+  }
+  header.scrolled { box-shadow: 0 4px 24px rgba(28,24,20,0.08); }
+
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 68px;
+  }
+  .nav-logo {
+    font-family: var(--serif); font-size: 1.45rem; font-weight: 600;
+    color: var(--ink); text-decoration: none; letter-spacing: .02em;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .nav-logo .cross-icon {
+    width: 20px; height: 20px; position: relative; flex-shrink: 0;
+  }
+  .nav-logo .cross-icon::before, .nav-logo .cross-icon::after {
+    content: ''; position: absolute; background: var(--gold); border-radius: 1.5px;
+  }
+  .nav-logo .cross-icon::before { width: 3px; height: 100%; left: 50%; transform: translateX(-50%); }
+  .nav-logo .cross-icon::after  { width: 100%; height: 3px; top: 38%; transform: translateY(-50%); }
+
+  nav { display: flex; gap: 2rem; align-items: center; }
+  nav a {
+    font-size: .875rem; font-weight: 500; letter-spacing: .04em;
+    color: var(--ink-60); text-decoration: none;
+    position: relative; padding-bottom: 2px;
+    transition: color .2s;
+  }
+  nav a::after {
+    content: ''; position: absolute; bottom: -2px; left: 0;
+    width: 0; height: 1.5px; background: var(--gold);
+    transition: width .3s ease;
+  }
+  nav a:hover, nav a.active { color: var(--ink); }
+  nav a:hover::after, nav a.active::after { width: 100%; }
+
+  .nav-hamburger {
+    display: none; flex-direction: column; gap: 5px;
+    background: none; border: none; cursor: pointer; padding: 4px;
+  }
+  .nav-hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--ink); transition: .3s;
+  }
+
+  /* ── 히어로 ── */
+  #hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    padding: 120px 2rem 80px;
+    text-align: center;
+  }
+  .hero-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 70% 30%, rgba(184,146,74,.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 70%, rgba(184,146,74,.08) 0%, transparent 60%),
+      var(--cream);
+  }
+  .hero-ornament {
+    position: absolute; font-family: var(--serif); font-size: 18rem;
+    opacity: .04; color: var(--gold); font-weight: 300;
+    pointer-events: none; user-select: none;
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    line-height: 1; letter-spacing: -.05em;
+  }
+  .hero-content { position: relative; z-index: 1; }
+  .hero-eyebrow {
+    font-size: .8rem; letter-spacing: .18em; color: var(--gold);
+    text-transform: uppercase; margin-bottom: 1.2rem;
+    font-family: var(--sans); font-weight: 400;
+  }
+  .hero-title {
+    font-family: var(--serif); font-weight: 300;
+    font-size: clamp(2.6rem, 6vw, 5.2rem);
+    line-height: 1.18; letter-spacing: -.01em;
+    color: var(--ink); margin-bottom: 1.4rem;
+  }
+  .hero-title em { font-style: italic; color: var(--gold); }
+  .hero-subtitle {
+    font-size: 1.05rem; color: var(--ink-60);
+    max-width: 520px; margin: 0 auto 2.4rem;
+    line-height: 1.8; font-weight: 300;
+  }
+  .hero-verse {
+    font-family: var(--serif); font-style: italic;
+    font-size: 1.1rem; color: var(--gold-lt);
+    letter-spacing: .02em;
+  }
+  .hero-scroll {
+    position: absolute; bottom: 2.5rem; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: .5rem;
+    color: var(--ink-30); font-size: .75rem; letter-spacing: .08em;
+    animation: float 2.4s ease-in-out infinite;
+  }
+  .hero-scroll::after {
+    content: ''; width: 1px; height: 40px;
+    background: linear-gradient(var(--ink-30), transparent);
+  }
+  @keyframes float { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(6px)} }
+
+  /* ── 섹션 공통 ── */
+  section {
+    padding: 100px 2rem;
+    max-width: 1100px; margin: 0 auto;
+  }
+  .section-header { text-align: center; margin-bottom: 4rem; }
+  .section-tag {
+    display: inline-block; font-size: .75rem;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--gold); border: 1px solid var(--border);
+    padding: .3rem .9rem; border-radius: 20px;
+    margin-bottom: 1rem; font-family: var(--sans);
+  }
+  .section-title {
+    font-family: var(--serif); font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 300; letter-spacing: -.01em; color: var(--ink);
+    line-height: 1.25; margin-bottom: .8rem;
+  }
+  .section-title em { font-style: italic; color: var(--gold); }
+  .section-sub {
+    font-size: .95rem; color: var(--ink-60);
+    max-width: 500px; margin: 0 auto; line-height: 1.8;
+  }
+  .divider {
+    width: 48px; height: 1px;
+    background: linear-gradient(to right, transparent, var(--gold), transparent);
+    margin: 2rem auto 0;
+  }
+
+  /* ── 교회소개 ── */
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: center;
+    margin-bottom: 4rem;
+  }
+  .about-text h3 {
+    font-family: var(--serif); font-size: 1.6rem;
+    font-weight: 400; color: var(--ink); margin-bottom: 1rem;
+  }
+  .about-text p {
+    color: var(--ink-60); line-height: 2; font-size: .95rem;
+    margin-bottom: 1rem;
+  }
+  .about-info-list { list-style: none; margin-top: 1.5rem; }
+  .about-info-list li {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: .7rem 0; border-bottom: 1px solid var(--border);
+    font-size: .9rem;
+  }
+  .about-info-list li:last-child { border-bottom: none; }
+  .about-info-list .lbl {
+    min-width: 80px; color: var(--gold); font-weight: 500;
+    letter-spacing: .02em; font-size: .8rem; padding-top: 1px;
+  }
+  .about-info-list .val { color: var(--ink); line-height: 1.7; }
+  .about-visual {
+    position: relative; border-radius: 2px; overflow: hidden;
+    aspect-ratio: 4/5;
+    background: linear-gradient(135deg, #e8e0d4 0%, #d4c9b8 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .about-visual-inner {
+    width: 80px; height: 80px; position: relative; opacity: .25;
+  }
+  .about-visual-inner::before, .about-visual-inner::after {
+    content: ''; position: absolute; background: var(--ink); border-radius: 3px;
+  }
+  .about-visual-inner::before { width: 10px; height: 100%; left: 50%; transform: translateX(-50%); }
+  .about-visual-inner::after  { width: 100%; height: 10px; top: 33%; transform: translateY(-50%); }
+  .about-visual-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--ink-30); font-size: .8rem; gap: 1rem;
+  }
+  .about-visual img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover;
+    display: none;
+  }
+  .about-visual img.loaded { display: block; }
+
+  /* ── 예배시간 ── */
+  #worship { background: var(--ink); color: var(--white); margin: 0; max-width: 100%; padding: 100px 2rem; }
+  #worship .section-title { color: var(--white); }
+  #worship .section-sub { color: rgba(255,255,255,.5); }
+
+  .worship-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5px;
+    max-width: 1100px; margin: 0 auto;
+    background: rgba(255,255,255,.06);
+    border-radius: 4px; overflow: hidden;
+  }
+  .worship-card {
+    background: rgba(255,255,255,.04);
+    padding: 2.5rem 2rem;
+    position: relative; overflow: hidden;
+    transition: background .3s;
+  }
+  .worship-card:hover { background: rgba(184,146,74,.12); }
+  .worship-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: transparent;
+    transition: background .3s;
+  }
+  .worship-card:hover::before { background: var(--gold); }
+  .worship-name {
+    font-family: var(--serif); font-size: 1.3rem;
+    font-weight: 400; color: var(--white);
+    margin-bottom: .8rem; letter-spacing: .01em;
+  }
+  .worship-time {
+    font-size: 2rem; font-weight: 300;
+    color: var(--gold-lt); letter-spacing: -.02em;
+    font-family: var(--serif); margin-bottom: .4rem;
+  }
+  .worship-day {
+    font-size: .8rem; letter-spacing: .1em;
+    color: rgba(255,255,255,.4); text-transform: uppercase;
+    margin-bottom: .8rem;
+  }
+  .worship-place {
+    font-size: .85rem; color: rgba(255,255,255,.55);
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .worship-place::before {
+    content: ''; width: 4px; height: 4px;
+    background: var(--gold); border-radius: 50%; flex-shrink: 0;
+  }
+  .worship-loading, .worship-empty {
+    color: rgba(255,255,255,.3); text-align: center;
+    padding: 3rem; font-size: .9rem; grid-column: 1/-1;
+  }
+
+  /* ── 스트리밍 ── */
+  .streaming-wrap {
+    max-width: 900px; margin: 0 auto;
+  }
+  .streaming-embed {
+    aspect-ratio: 16/9; background: var(--ink);
+    border-radius: 4px; overflow: hidden;
+    position: relative; margin-bottom: 2rem;
+    box-shadow: 0 24px 64px rgba(28,24,20,.15);
+  }
+  .streaming-embed iframe {
+    width: 100%; height: 100%; border: none;
+    position: absolute; inset: 0;
+  }
+  .streaming-embed .embed-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: rgba(255,255,255,.3); gap: 1rem;
+    font-size: .9rem;
+  }
+  .streaming-play-icon {
+    width: 60px; height: 60px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .streaming-play-icon::after {
+    content: ''; border-left: 20px solid rgba(255,255,255,.4);
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    margin-left: 4px;
+  }
+  .streaming-links {
+    display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center;
+  }
+  .streaming-link {
+    display: inline-flex; align-items: center; gap: .6rem;
+    padding: .7rem 1.5rem; border: 1px solid var(--border);
+    border-radius: 2px; text-decoration: none;
+    color: var(--ink); font-size: .875rem;
+    transition: all .2s; font-weight: 500;
+  }
+  .streaming-link:hover {
+    background: var(--gold); border-color: var(--gold); color: var(--white);
+  }
+
+  /* ── 활동사진 ── */
+  #photos { background: var(--ink); margin: 0; max-width: 100%; padding: 100px 2rem; }
+  #photos .section-header .section-title { color: var(--white); }
+  #photos .section-sub { color: rgba(255,255,255,.4); }
+  #photos .section-tag { border-color: rgba(184,146,74,.3); }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5px;
+    max-width: 1100px; margin: 0 auto;
+    background: rgba(255,255,255,.04);
+  }
+  .photo-card {
+    position: relative; overflow: hidden;
+    aspect-ratio: 4/3;
+    cursor: pointer;
+  }
+  .photo-card img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform .5s ease;
+    display: block;
+  }
+  .photo-card:hover img { transform: scale(1.05); }
+  .photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top, rgba(28,24,20,.85) 0%, transparent 50%);
+    opacity: 0; transition: opacity .3s;
+    display: flex; flex-direction: column;
+    justify-content: flex-end; padding: 1.2rem;
+  }
+  .photo-card:hover .photo-overlay { opacity: 1; }
+  .photo-caption {
+    font-size: .875rem; color: var(--white);
+    font-weight: 400; margin-bottom: .2rem;
+  }
+  .photo-date {
+    font-size: .75rem; color: var(--gold-lt);
+    letter-spacing: .06em;
+  }
+  .photo-placeholder {
+    background: rgba(255,255,255,.04);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.15); font-size: .85rem;
+  }
+  .photo-empty {
+    color: rgba(255,255,255,.3); text-align: center;
+    padding: 4rem; font-size: .9rem; grid-column: 1/-1;
+  }
+
+  /* ── 라이트박스 ── */
+  #lightbox {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.92);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .3s, visibility .3s;
+    padding: 2rem;
+  }
+  #lightbox.open { opacity: 1; visibility: visible; }
+  .lightbox-img {
+    max-width: 90vw; max-height: 85vh;
+    object-fit: contain; border-radius: 2px;
+  }
+  .lightbox-close {
+    position: absolute; top: 1.5rem; right: 1.5rem;
+    background: none; border: 1px solid rgba(255,255,255,.2);
+    color: white; width: 40px; height: 40px;
+    border-radius: 50%; font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,.1); }
+  .lightbox-info {
+    position: absolute; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
+    text-align: center; color: rgba(255,255,255,.7); font-size: .875rem;
+  }
+
+  /* ── 푸터 ── */
+  footer {
+    background: #111;
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  footer .footer-logo {
+    font-family: var(--serif); font-size: 1.3rem;
+    color: rgba(255,255,255,.6); margin-bottom: .5rem;
+  }
+  footer .footer-verse {
+    font-family: var(--serif); font-style: italic;
+    color: var(--gold); font-size: .9rem; margin-bottom: 1rem;
+  }
+  footer .footer-info {
+    font-size: .8rem; color: rgba(255,255,255,.25);
+    line-height: 2;
+  }
+
+  /* ── 알림 토스트 ── */
+  #toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--ink); color: var(--white);
+    padding: .7rem 1.5rem; border-radius: 2px;
+    font-size: .85rem; border-left: 3px solid var(--gold);
+    opacity: 0; visibility: hidden;
+    transition: all .3s; z-index: 300;
+  }
+  #toast.show {
+    opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
+  }
+
+  /* ── 반응형 ── */
+  @media (max-width: 768px) {
+    nav { display: none; }
+    nav.open {
+      display: flex; flex-direction: column;
+      position: absolute; top: 68px; left: 0; right: 0;
+      background: var(--cream); border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem 1.5rem; gap: 1rem;
+    }
+    .nav-hamburger { display: flex; }
+    .about-grid { grid-template-columns: 1fr; gap: 2rem; }
+    .about-visual { aspect-ratio: 16/9; order: -1; }
+    section { padding: 70px 1.2rem; }
+    .streaming-links { flex-direction: column; align-items: center; }
+  }
+
+  /* ── 진입 애니메이션 ── */
+  [data-reveal] {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity .7s ease, transform .7s ease;
+  }
+  [data-reveal].revealed {
+    opacity: 1; transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- 로딩 -->
+<div id="page-loader">
+  <div class="loader-cross"></div>
+</div>
+
+<!-- 헤더 -->
+<header id="header">
+  <div class="nav-inner">
+    <a href="#hero" class="nav-logo">
+      <span class="cross-icon"></span>
+      <span id="nav-church-name">교회명 로딩중…</span>
+    </a>
+    <button class="nav-hamburger" id="hamburger" aria-label="메뉴">
+      <span></span><span></span><span></span>
+    </button>
+    <nav id="main-nav">
+      <a href="#about">교회소개</a>
+      <a href="#worship">예배시간</a>
+      <a href="#streaming">예배스트리밍</a>
+      <a href="#photos">활동사진</a>
+    </nav>
+  </div>
+</header>
+
+<!-- 히어로 -->
+<section id="hero" style="max-width:100%; padding-top:0; padding-bottom:0;">
+  <div class="hero-bg"></div>
+  <div class="hero-ornament">✝</div>
+  <div class="hero-content" data-reveal>
+    <p class="hero-eyebrow">Welcome to Our Church</p>
+    <h1 class="hero-title">
+      <span id="hero-name">교회에 오신 것을<br>환영합니다</span>
+    </h1>
+    <p class="hero-subtitle" id="hero-tagline">잠시 후 내용이 로딩됩니다…</p>
+    <p class="hero-verse" id="hero-verse">"주 예수를 믿으라 그리하면 너와 네 집이 구원을 받으리라"</p>
+  </div>
+  <div class="hero-scroll">SCROLL</div>
+</section>
+
+<!-- 교회소개 -->
+<section id="about">
+  <div class="section-header" data-reveal>
+    <span class="section-tag">About Us</span>
+    <h2 class="section-title">교회 <em>소개</em></h2>
+    <div class="divider"></div>
+  </div>
+  <div class="about-grid" data-reveal>
+    <div class="about-text">
+      <h3 id="about-title">하나님의 사랑으로</h3>
+      <p id="about-desc">교회 소개 내용이 구글 시트에서 로딩됩니다.</p>
+      <ul class="about-info-list" id="about-info-list">
+        <li><span class="lbl">로딩중</span><span class="val">…</span></li>
+      </ul>
+    </div>
+    <div class="about-visual">
+      <img id="about-img" alt="교회 사진" />
+      <div class="about-visual-placeholder" id="about-img-placeholder">
+        <div class="about-visual-inner"></div>
+        <span>교회 이미지</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 예배시간 -->
+<section id="worship" style="max-width:100%;">
+  <div class="section-header" data-reveal>
+    <span class="section-tag">Worship Schedule</span>
+    <h2 class="section-title">예배 <em>안내</em></h2>
+    <p class="section-sub">매 주일 및 주중 예배를 통해 하나님을 만나세요.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="worship-grid" id="worship-grid" data-reveal>
+    <div class="worship-loading">예배 정보 로딩 중…</div>
+  </div>
+</section>
+
+<!-- 예배스트리밍 -->
+<section id="streaming">
+  <div class="section-header" data-reveal>
+    <span class="section-tag">Live Streaming</span>
+    <h2 class="section-title">예배 <em>스트리밍</em></h2>
+    <p class="section-sub" id="streaming-desc">실시간 및 최근 예배 영상을 시청하세요.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="streaming-wrap" data-reveal>
+    <div class="streaming-embed" id="streaming-embed">
+      <div class="embed-placeholder">
+        <div class="streaming-play-icon"></div>
+        <span>구글 시트에서 유튜브 URL을 입력하면 자동으로 표시됩니다</span>
+      </div>
+    </div>
+    <div class="streaming-links" id="streaming-links"></div>
+  </div>
+</section>
+
+<!-- 활동사진 -->
+<section id="photos" style="max-width:100%;">
+  <div class="section-header" data-reveal>
+    <span class="section-tag">Gallery</span>
+    <h2 class="section-title" style="color:white;">활동 <em>사진</em></h2>
+    <p class="section-sub">교회 공동체의 소중한 순간들을 담았습니다.</p>
+    <div class="divider"></div>
+  </div>
+  <div class="photo-grid" id="photo-grid" data-reveal>
+    <div class="photo-empty">사진을 구글 시트에서 추가하세요.</div>
+  </div>
+</section>
+
+<!-- 푸터 -->
+<footer>
+  <p class="footer-logo" id="footer-name">교회명</p>
+  <p class="footer-verse" id="footer-verse">"하나님은 사랑이시라"</p>
+  <p class="footer-info" id="footer-info">주소 · 전화</p>
+</footer>
+
+<!-- 라이트박스 -->
+<div id="lightbox">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <div class="lightbox-info" id="lightbox-info"></div>
+</div>
+
+<!-- 토스트 알림 -->
+<div id="toast"></div>
+
+<script>
+/* =============================================
+   ★ 여기서 구글 시트 ID를 설정하세요 ★
+   구글 시트 URL: https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit
+   아래 SHEET_ID에 해당 ID를 붙여넣으세요.
+   반드시 시트를 "링크 있는 모든 사용자" 공개로 설정해야 합니다.
+============================================= */
+const SHEET_ID = "166IiKVgzpS95JfKasT3Yk-obminsvqBRPIfLlO7tqlk";
+
+/* 각 시트 이름 (구글 시트 탭 이름과 일치해야 함) */
+const SHEETS = {
+  info:      "교회정보",
+  worship:   "예배시간",
+  streaming: "스트리밍",
+  photos:    "활동사진"
+};
+
+/* ── 구글 시트 데이터 로드 (gviz JSON) ── */
+async function fetchSheet(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    // gviz 응답에서 JSON 추출
+    const json = JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));
+    return parseGviz(json);
+  } catch (e) {
+    console.warn(`시트 "${sheetName}" 로드 실패:`, e.message);
+    return [];
+  }
+}
+
+function parseGviz(json) {
+  const rows = json?.table?.rows || [];
+  const cols = json?.table?.cols || [];
+  return rows.map(row => {
+    const obj = {};
+    cols.forEach((col, i) => {
+      const label = (col.label || col.id || `col${i}`).trim();
+      const cell = row.c?.[i];
+      obj[label] = cell?.v != null ? String(cell.v) : (cell?.f || "");
+    });
+    return obj;
+  }).filter(r => Object.values(r).some(v => v.trim?.() !== ""));
+}
+
+/* ── 유튜브 URL → embed URL 변환 ── */
+function youtubeEmbed(url) {
+  if (!url) return null;
+  let id = null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) {
+      id = u.pathname.slice(1);
+    } else if (u.hostname.includes("youtube.com")) {
+      if (u.pathname.includes("/live/")) id = u.pathname.split("/live/")[1]?.split("?")[0];
+      else id = u.searchParams.get("v");
+    }
+  } catch {}
+  return id ? `https://www.youtube.com/embed/${id}?autoplay=0&rel=0` : null;
+}
+
+/* ── 섹션별 렌더 ── */
+
+/* 교회정보 */
+async function loadInfo() {
+  const rows = await fetchSheet(SHEETS.info);
+  if (!rows.length) return;
+
+  // key-value 형태 (항목, 내용) 또는 첫 행 직접 접근
+  const kv = {};
+  rows.forEach(r => {
+    const keys = Object.keys(r);
+    if (keys.length >= 2) kv[r[keys[0]]?.trim()] = r[keys[1]]?.trim();
+  });
+
+  const name    = kv["교회명"] || "";
+  const pastor  = kv["담임목사"] || "";
+  const addr    = kv["주소"] || "";
+  const tel     = kv["전화"] || "";
+  const founded = kv["설립년도"] || "";
+  const desc    = kv["소개글"] || "";
+  const tagline = kv["슬로건"] || "";
+  const verse   = kv["대표성구"] || "";
+  const imgUrl  = kv["교회이미지"] || "";
+
+  if (name) {
+    document.title = name;
+    document.getElementById("nav-church-name").textContent = name;
+    document.getElementById("hero-name").textContent = name + "에\n오신 것을 환영합니다";
+    document.getElementById("footer-name").textContent = name;
+  }
+  if (tagline) document.getElementById("hero-tagline").textContent = tagline;
+  if (verse)   document.getElementById("hero-verse").textContent = `"${verse}"`;
+  if (desc)    document.getElementById("about-desc").textContent = desc;
+  if (name)    document.getElementById("about-title").textContent = name;
+
+  // 상세정보 리스트
+  const info = [];
+  if (pastor)  info.push(["담임목사", pastor]);
+  if (founded) info.push(["설립년도", founded + "년"]);
+  if (addr)    info.push(["주소", addr]);
+  if (tel)     info.push(["전화", tel]);
+  const footerParts = [addr, tel].filter(Boolean);
+  document.getElementById("footer-info").textContent = footerParts.join(" · ");
+  if (kv["대표성구"]) document.getElementById("footer-verse").textContent = `"${kv["대표성구"]}"`;
+
+  const list = document.getElementById("about-info-list");
+  if (info.length) {
+    list.innerHTML = info.map(([l, v]) =>
+      `<li><span class="lbl">${l}</span><span class="val">${v}</span></li>`
+    ).join("");
+  }
+
+  // 교회 이미지
+  if (imgUrl) {
+    const img = document.getElementById("about-img");
+    img.src = imgUrl;
+    img.onload = () => {
+      img.classList.add("loaded");
+      document.getElementById("about-img-placeholder").style.display = "none";
+    };
+  }
+}
+
+/* 예배시간 */
+async function loadWorship() {
+  const rows = await fetchSheet(SHEETS.worship);
+  const grid = document.getElementById("worship-grid");
+  if (!rows.length) {
+    grid.innerHTML = '<div class="worship-empty">구글 시트에 예배 정보를 추가하세요.</div>';
+    return;
+  }
+  grid.innerHTML = rows.map(r => {
+    const name  = r["예배명"] || r[Object.keys(r)[0]] || "";
+    const day   = r["요일"] || r[Object.keys(r)[1]] || "";
+    const time  = r["시간"] || r[Object.keys(r)[2]] || "";
+    const place = r["장소"] || r[Object.keys(r)[3]] || "";
+    return `<div class="worship-card">
+      <div class="worship-name">${name}</div>
+      <div class="worship-time">${time}</div>
+      <div class="worship-day">${day}</div>
+      ${place ? `<div class="worship-place">${place}</div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+/* 스트리밍 */
+async function loadStreaming() {
+  const rows = await fetchSheet(SHEETS.streaming);
+  if (!rows.length) return;
+
+  const embed = document.getElementById("streaming-embed");
+  const links = document.getElementById("streaming-links");
+
+  rows.forEach((r, i) => {
+    const title = r["제목"] || r[Object.keys(r)[0]] || "";
+    const url   = r["URL"]   || r["url"] || r[Object.keys(r)[1]] || "";
+    const desc  = r["설명"]  || r[Object.keys(r)[2]] || "";
+
+    if (i === 0) {
+      if (desc) document.getElementById("streaming-desc").textContent = desc;
+      const eUrl = youtubeEmbed(url);
+      if (eUrl) {
+        embed.innerHTML = `<iframe src="${eUrl}" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>`;
+      }
+    }
+
+    if (url) {
+      links.innerHTML += `<a class="streaming-link" href="${url}" target="_blank" rel="noopener">
+        ▶ ${title || "예배 영상 " + (i + 1)}
+      </a>`;
+    }
+  });
+}
+
+/* 활동사진 */
+async function loadPhotos() {
+  const rows = await fetchSheet(SHEETS.photos);
+  const grid = document.getElementById("photo-grid");
+  if (!rows.length) return;
+
+  grid.innerHTML = rows.map((r, i) => {
+    const url     = r["이미지URL"] || r["url"] || r["URL"] || r[Object.keys(r)[0]] || "";
+    const caption = r["제목"] || r[Object.keys(r)[1]] || "";
+    const date    = r["날짜"] || r[Object.keys(r)[2]] || "";
+
+    if (!url) return "";
+    return `<div class="photo-card" data-src="${url}" data-caption="${caption}" data-date="${date}">
+      <img src="${url}" alt="${caption}" loading="lazy" onerror="this.parentElement.classList.add('photo-placeholder'); this.style.display='none';">
+      <div class="photo-overlay">
+        <div class="photo-caption">${caption}</div>
+        <div class="photo-date">${date}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  // 라이트박스 이벤트
+  grid.querySelectorAll(".photo-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const src = card.dataset.src;
+      const cap = card.dataset.caption;
+      const dt  = card.dataset.date;
+      document.getElementById("lightbox-img").src = src;
+      document.getElementById("lightbox-info").textContent = [cap, dt].filter(Boolean).join("  ·  ");
+      document.getElementById("lightbox").classList.add("open");
+    });
+  });
+}
+
+/* ── 라이트박스 닫기 ── */
+document.getElementById("lightbox-close").addEventListener("click", () => {
+  document.getElementById("lightbox").classList.remove("open");
+});
+document.getElementById("lightbox").addEventListener("click", e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove("open");
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") document.getElementById("lightbox").classList.remove("open");
+});
+
+/* ── 스크롤 효과 ── */
+window.addEventListener("scroll", () => {
+  const h = document.getElementById("header");
+  h.classList.toggle("scrolled", window.scrollY > 40);
+
+  const navLinks = document.querySelectorAll("nav a");
+  const sections = ["about","worship","streaming","photos"];
+  let current = "";
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 100) current = id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle("active", a.getAttribute("href") === "#" + current);
+  });
+});
+
+/* ── 진입 애니메이션 (IntersectionObserver) ── */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add("revealed"); revealObs.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll("[data-reveal]").forEach(el => revealObs.observe(el));
+
+/* ── 모바일 햄버거 ── */
+document.getElementById("hamburger").addEventListener("click", () => {
+  document.getElementById("main-nav").classList.toggle("open");
+});
+
+/* ── 토스트 ── */
+function showToast(msg, dur = 3000) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), dur);
+}
+
+/* ── 초기화 ── */
+async function init() {
+  if (SHEET_ID === "YOUR_GOOGLE_SHEET_ID_HERE") {
+    showToast("⚠️ SHEET_ID를 설정해주세요 (index.html 상단 스크립트 참고)", 6000);
+    document.getElementById("nav-church-name").textContent = "우리 교회";
+    document.getElementById("hero-name").textContent = "교회 홈페이지";
+    document.getElementById("hero-tagline").textContent = "구글 시트 연동 전입니다. 아래 설정 가이드를 참고하세요.";
+    document.getElementById("worship-grid").innerHTML = '<div class="worship-loading">SHEET_ID 설정 후 표시됩니다</div>';
+    document.getElementById("page-loader").classList.add("hidden");
+    return;
+  }
+
+  try {
+    await Promise.all([loadInfo(), loadWorship(), loadStreaming(), loadPhotos()]);
+  } catch (e) {
+    showToast("일부 데이터 로드에 실패했습니다.");
+    console.error(e);
+  }
+  document.getElementById("page-loader").classList.add("hidden");
+}
+
+window.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
